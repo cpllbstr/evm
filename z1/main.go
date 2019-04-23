@@ -236,7 +236,12 @@ func (gp *group) CalcDeltas(g graph) {
 	gp.outdeltas = []int{}
 	outer := ConfigWithout(g.config, gp.verts)
 	for _, v := range gp.verts {
-		gp.outdeltas = append(gp.outdeltas, g.Power(v, outer)-g.Power(v, gp.verts))
+		if g.Power(v, outer) < 1 {
+			gp.outdeltas = append(gp.outdeltas, -100)
+		} else {
+			gp.outdeltas = append(gp.outdeltas, g.Power(v, outer)-g.Power(v, gp.verts))
+		}
+
 	}
 }
 
@@ -271,16 +276,9 @@ func (g graph) VertsToSwap(grp []group) (int, int) {
 	return maxx, maxy
 }
 
-func main() {
-	divides := [][]int{{5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6}, {7, 7, 5, 5, 6}}
-	ngroups := divides[2]
-
-	g := NewGraph(quest)
-	//g.PlotSubm(g.config)
+func (g graph) Bearing(ngroups []int) []group {
 	grps := CreateGroups(ngroups)
 	currconf := g.config
-
-	//нахождение опорного графа
 	for grupi := 0; grupi < len(grps); grupi++ {
 		verts := g.FindSubMins(currconf)
 		_, n := g.CountNeigh(verts, currconf)
@@ -304,34 +302,49 @@ func main() {
 		}
 		currconf = ConfigWithout(currconf, grps[grupi].verts)
 	}
+	return grps
+}
 
-	//fmt.Println(grps)
-
-	testmat := NewGraph(test2)
-	tgrps := []group{
-		group{cap: 4, verts: []int{0, 1, 2, 3}, outdeltas: []int{}, filled: true},
-		group{cap: 4, verts: []int{4, 5, 6, 7}, outdeltas: []int{}, filled: true},
-	}
-	testmat.PlotSubm(testmat.config)
+func (g graph) Iteartions(tgrps []group) []group {
 	for i := range tgrps {
-		tgrps[i].CalcDeltas(testmat)
-		fmt.Println(tgrps[i].outdeltas)
+		tgrps[i].CalcDeltas(g)
 	}
 	v1last := 0
 	v2last := 0
-	for v1, v2 := testmat.VertsToSwap(tgrps); v1 >= 0 && v2 >= 0; v1, v2 = testmat.VertsToSwap(tgrps) {
-		fmt.Println("v1v2:", v1, v2)
-		testmat.PlotSubm(GropConfig(tgrps))
+	for v1, v2 := g.VertsToSwap(tgrps); v1 >= 0 && v2 >= 0; v1, v2 = g.VertsToSwap(tgrps) {
 		Swap(v1, v2, tgrps)
 		for i := range tgrps {
-			tgrps[i].CalcDeltas(testmat)
-			fmt.Println(tgrps[i].outdeltas)
+			tgrps[i].CalcDeltas(g)
 		}
-		testmat.PlotSubm(GropConfig(tgrps))
 		if v1last == v2 && v2last == v1 {
-			break
+			panic("BackSwap")
 		}
 		v1last, v2last = v1, v2
 	}
+
+	return tgrps
+}
+
+func GroupPrint(bear []group) {
+	for _, b := range bear {
+		fmt.Print(b.verts)
+	}
+	fmt.Println()
+}
+
+func main() {
+	divides := [][]int{{5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6}, {7, 7, 5, 5, 6}, {4, 4}}
+
+	g := NewGraph(quest)
+
+	bear := g.Bearing(divides[0])
+	fmt.Println("Последовательный алгоритм:")
+	GroupPrint(bear)
+
+	iter := g.Iteartions(bear)
+	fmt.Println("Итерационный алгоритм:")
+	GroupPrint(iter)
+
+	g.PlotSubm(GropConfig(iter))
 
 }
