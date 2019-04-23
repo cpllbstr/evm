@@ -130,11 +130,35 @@ func (g graph) Neighbors(verts, subm []int) []int {
 	return neigh
 }
 
-//Swap -  изменяет конфигурацию графа, меняет значения в матрице конфигурации
-func (g graph) Swap(in1, in2 int) {
-	buf := g.config[in1]
-	g.config[in1] = g.config[in2]
-	g.config[in2] = buf
+//Swap -  меняет местами узлы в группах
+func Swap(vert1, vert2 int, grp []group) {
+	g1i := -1
+	v1i := -1
+	g2i := -1
+	v2i := -1
+	for gi, g := range grp {
+		for vi, v := range g.verts {
+			if vert1 == v {
+				g1i = gi
+				v1i = vi
+			}
+			if vert2 == v {
+				g2i = gi
+				v2i = vi
+			}
+		}
+	}
+	buf := grp[g1i].verts[v1i]
+	grp[g1i].verts[v1i] = grp[g2i].verts[v2i]
+	grp[g2i].verts[v2i] = buf
+}
+
+func GropConfig(grp []group) []int {
+	groupconf := []int{}
+	for _, v := range grp {
+		groupconf = append(groupconf, v.verts...)
+	}
+	return groupconf
 }
 
 //FindSubMin - ищет вершины с минимальной степенью в подмножестве. Возвращает номера вершин
@@ -209,13 +233,14 @@ func (g graph) CountNeigh(verts, subm []int) ([]int, int) {
 }
 
 func (gp *group) CalcDeltas(g graph) {
+	gp.outdeltas = []int{}
 	outer := ConfigWithout(g.config, gp.verts)
 	for _, v := range gp.verts {
 		gp.outdeltas = append(gp.outdeltas, g.Power(v, outer)-g.Power(v, gp.verts))
 	}
 }
 
-func (g graph) CreatePerM(grp []group) {
+func (g graph) VertsToSwap(grp []group) (int, int) {
 	minlen := 1000
 	mini := 0
 	for i := range grp {
@@ -223,28 +248,27 @@ func (g graph) CreatePerM(grp []group) {
 			mini = i
 		}
 	}
-	max := -1000
-	maxx := 0
-	maxy := 0
+	max := 0
+	maxx := -1
+	maxy := -1
 	for i := 0; i < len(grp); i++ {
 		if i != mini {
 			for x := range grp[mini].outdeltas {
 				for y := range grp[i].outdeltas {
-					Pi := grp[mini].outdeltas[x] + grp[i].outdeltas[y] - 2*g.Power(grp[mini].verts[x], []int{grp[mini].verts[y]})
-					fmt.Print(" |", Pi)
+					Pi := grp[mini].outdeltas[x] + grp[i].outdeltas[y] - 2*g.Power(grp[mini].verts[x], []int{grp[i].verts[y]})
 					if Pi > max {
-						maxx = x
-						maxy = y
+						max = Pi
+						maxx = grp[mini].verts[x]
+						maxy = grp[i].verts[y]
 					}
 				}
-				fmt.Println()
 			}
 
 		}
 
 	}
 	fmt.Println(maxx, maxy)
-
+	return maxx, maxy
 }
 
 func main() {
@@ -288,11 +312,26 @@ func main() {
 		group{cap: 4, verts: []int{0, 1, 2, 3}, outdeltas: []int{}, filled: true},
 		group{cap: 4, verts: []int{4, 5, 6, 7}, outdeltas: []int{}, filled: true},
 	}
+	testmat.PlotSubm(testmat.config)
 	for i := range tgrps {
 		tgrps[i].CalcDeltas(testmat)
+		fmt.Println(tgrps[i].outdeltas)
+	}
+	v1last := 0
+	v2last := 0
+	for v1, v2 := testmat.VertsToSwap(tgrps); v1 >= 0 && v2 >= 0; v1, v2 = testmat.VertsToSwap(tgrps) {
+		fmt.Println("v1v2:", v1, v2)
+		testmat.PlotSubm(GropConfig(tgrps))
+		Swap(v1, v2, tgrps)
+		for i := range tgrps {
+			tgrps[i].CalcDeltas(testmat)
+			fmt.Println(tgrps[i].outdeltas)
+		}
+		testmat.PlotSubm(GropConfig(tgrps))
+		if v1last == v2 && v2last == v1 {
+			break
+		}
+		v1last, v2last = v1, v2
 	}
 
-	testmat.CreatePerM(tgrps)
-
-	fmt.Println(tgrps)
 }
