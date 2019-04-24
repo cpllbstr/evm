@@ -185,27 +185,29 @@ func (g graph) FindSubMins(subm []int) []int {
 	return vert
 }
 
-func (g graph) BetterCands(cand, subm []int) ([]int, int) {
+func (g graph) BetterCands(cand, subm []int, orig int) ([]int, int) {
 	deltas := []int{}
+	fmt.Println("Better:", cand, subm)
 	for _, c := range cand {
-		deltas = append(deltas, g.Power(c, subm)-g.Power(c, cand))
+		deltas = append(deltas, g.Power(c, subm)-g.Power(c, append(cand, orig)))
 	}
+	fmt.Println("D:", deltas)
 	max := -10000
 	min := 10000
 	mini := 0
 	maxi := 0
 	for i, delta := range deltas {
-		if delta < max {
+		if delta > max {
 			max = delta
 			maxi = i
 		}
-		if delta > min {
+		if delta < min {
 			min = delta
 			mini = i
 		}
 	}
+	fmt.Println("Adding:", cand[mini])
 	return ConfigWithout(cand, []int{cand[maxi]}), cand[mini]
-
 }
 
 func (g graph) CountNeigh(verts, subm []int) ([]int, int) {
@@ -284,22 +286,22 @@ func (g graph) Bearing(ngroups []int) []group {
 		_, n := g.CountNeigh(verts, currconf)
 		vertc := verts[n]
 		cand := []int{vertc}
-		for !grps[grupi].filled {
-			if len(currconf) == grps[grupi].cap {
-				grps[grupi].verts = currconf
-				if grps[grupi].CheckFilled() {
-					break
-				}
-			} else {
-				for len(cand) < grps[grupi].cap {
-					neigh := g.Neighbors(cand, currconf)
-					_, bet := g.BetterCands(neigh, currconf)
-					cand = append(cand, bet)
-				}
-				grps[grupi].verts = cand
-				grps[grupi].CheckFilled()
+
+		/*if len(currconf) == grps[grupi].cap {
+			grps[grupi].verts = currconf
+			if grps[grupi].CheckFilled() {
+				break
 			}
+		} else {*/
+		for len(cand) < grps[grupi].cap {
+			neigh := g.Neighbors(cand, currconf)
+			_, bet := g.BetterCands(neigh, currconf, vertc)
+			cand = append(cand, bet)
+			//fmt.Println(grps[grupi], bet)
 		}
+		grps[grupi].verts = cand
+		grps[grupi].CheckFilled()
+		//}
 		currconf = ConfigWithout(currconf, grps[grupi].verts)
 	}
 	return grps
@@ -333,18 +335,19 @@ func GroupPrint(bear []group) {
 }
 
 func main() {
-	divides := [][]int{{5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6}, {7, 7, 5, 5, 6}, {4, 4}}
+	//divides := [][]int{{5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6}, {7, 7, 5, 5, 6}, {4, 4}}
 
-	g := NewGraph(quest)
+	g := NewGraph(test)
 
-	bear := g.Bearing(divides[0])
+	bear := g.Bearing([]int{3, 2, 2})
 	fmt.Println("Последовательный алгоритм:")
 	GroupPrint(bear)
 
-	iter := g.Iteartions(bear)
-	fmt.Println("Итерационный алгоритм:")
-	GroupPrint(iter)
-
-	g.PlotSubm(GropConfig(iter))
+	/*
+		iter := g.Iteartions(bear)
+		fmt.Println("Итерационный алгоритм:")
+		GroupPrint(iter)
+	*/
+	g.PlotSubm(GropConfig(bear))
 
 }
