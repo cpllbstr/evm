@@ -16,7 +16,7 @@ type graph struct {
 type group struct {
 	verts     []int //кандидаты в группе
 	cap       int   //максимальное число кандидатов в группе
-	outdeltas []int
+	outdeltas map[int]int
 	filled    bool
 }
 
@@ -68,7 +68,7 @@ func (g graph) PlotSubm(subm []int) {
 	for _, i := range subm {
 		fmt.Printf("%3v|", i)
 		for _, j := range subm {
-			fmt.Printf("% 3v", g.distanses[i][j])
+			fmt.Printf("%3v,", g.distanses[i][j])
 		}
 		fmt.Println()
 	}
@@ -236,15 +236,10 @@ func (g graph) CountNeigh(verts, subm []int) ([]int, int) {
 }
 
 func (gp *group) CalcDeltas(g graph) {
-	gp.outdeltas = []int{}
+	gp.outdeltas = make(map[int]int)
 	outer := ConfigWithout(g.config, gp.verts)
 	for _, v := range gp.verts {
-		if g.Power(v, outer) < 1 {
-			gp.outdeltas = append(gp.outdeltas, -100)
-		} else {
-			gp.outdeltas = append(gp.outdeltas, g.Power(v, outer)-g.Power(v, gp.verts))
-		}
-
+		gp.outdeltas[v] = g.Power(v, outer) - g.Power(v, gp.verts)
 	}
 }
 
@@ -252,18 +247,23 @@ func (g graph) VertsToSwap(grp []group) (int, int) {
 	minlen := 1000
 	mini := 0
 	for i := range grp {
-		if minlen > len(grp[i].verts) {
+		if len(grp[i].verts) < minlen { //находим группу с меньшим числом вершин
+			minlen = len(grp[i].verts)
 			mini = i
 		}
 	}
+	P := make(map[int][]int)
+	fmt.Println(grp[mini].verts)
 	max := 0
 	maxx := -1
 	maxy := -1
 	for i := 0; i < len(grp); i++ {
 		if i != mini {
-			for x := range grp[mini].outdeltas {
-				for y := range grp[i].outdeltas {
-					Pi := grp[mini].outdeltas[x] + grp[i].outdeltas[y] - 2*g.Power(grp[mini].verts[x], []int{grp[i].verts[y]})
+			for x, vx := range grp[mini].verts {
+				for y, vy := range grp[i].verts {
+					fmt.Println(vx, vy)
+					Pi := grp[mini].outdeltas[vx] + grp[i].outdeltas[vy] - 2*g.Power(vx, []int{vy})
+					P[vx] = append(P[vx], Pi)
 					if Pi > max {
 						max = Pi
 						maxx = grp[mini].verts[x]
@@ -275,7 +275,8 @@ func (g graph) VertsToSwap(grp []group) (int, int) {
 		}
 
 	}
-	fmt.Println(maxx, maxy)
+	fmt.Println("\n", P)
+	fmt.Println("Swap:", maxx, maxy)
 	return maxx, maxy
 }
 
@@ -309,6 +310,7 @@ func (g graph) Iteartions(tgrps []group) []group {
 	v2last := 0
 	for v1, v2 := g.VertsToSwap(tgrps); v1 >= 0 && v2 >= 0; v1, v2 = g.VertsToSwap(tgrps) {
 		if v1last == v2 && v2last == v1 {
+			fmt.Println("Cycling.")
 			break
 		}
 		Swap(v1, v2, tgrps)
@@ -329,18 +331,25 @@ func GroupPrint(bear []group) {
 }
 
 func main() {
-	divides := [][]int{{5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6}, {7, 7, 5, 5, 6}, {4, 4}}
+	//	divides := [][]int{{5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6}, {7, 7, 5, 5, 6}, {4, 4}}
 
-	g := NewGraph(quest)
+	g := NewGraph(test2)
 
-	bear := g.Bearing(divides[0])
+	bear := g.Bearing([]int{4, 4})
 	fmt.Println("Последовательный алгоритм:")
 	GroupPrint(bear)
 
-	iter := g.Iteartions(bear)
+	tgrps := []group{
+		group{cap: 2, verts: []int{0, 1}, outdeltas: make(map[int]int), filled: true},
+		group{cap: 3, verts: []int{2, 3, 4}, outdeltas: make(map[int]int), filled: true},
+		group{cap: 3, verts: []int{5, 6, 7}, outdeltas: make(map[int]int), filled: true},
+	}
+
+	gg := NewGraph(itert)
+
+	iter := gg.Iteartions(tgrps)
 	fmt.Println("Итерационный алгоритм:")
 	GroupPrint(iter)
-
-	g.PlotSubm(GropConfig(bear))
+	gg.PlotSubm(GropConfig(iter))
 
 }
