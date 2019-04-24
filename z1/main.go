@@ -56,9 +56,9 @@ func NewGraph(matr [][]int) graph {
 //Plot -  выводит текущее состояние матрицы смежности, вроде как красивенько даже
 func (g graph) PlotSubm(subm []int) {
 	fmt.Println()
-	fmt.Print("  |")
+	fmt.Print("   |")
 	for _, v := range subm {
-		fmt.Printf("% 3v", v)
+		fmt.Printf("%3v", v)
 	}
 	fmt.Println()
 	for range subm {
@@ -66,7 +66,7 @@ func (g graph) PlotSubm(subm []int) {
 	}
 	fmt.Println("---")
 	for _, i := range subm {
-		fmt.Print(i, " |")
+		fmt.Printf("%3v|", i)
 		for _, j := range subm {
 			fmt.Printf("% 3v", g.distanses[i][j])
 		}
@@ -187,11 +187,11 @@ func (g graph) FindSubMins(subm []int) []int {
 
 func (g graph) BetterCands(cand, subm []int, orig int) ([]int, int) {
 	deltas := []int{}
-	fmt.Println("Better:", cand, subm)
+	//fmt.Println("Better:", cand, subm)
 	for _, c := range cand {
 		deltas = append(deltas, g.Power(c, subm)-g.Power(c, append(cand, orig)))
 	}
-	fmt.Println("D:", deltas)
+	//fmt.Println("D:", deltas)
 	max := -10000
 	min := 10000
 	mini := 0
@@ -206,11 +206,12 @@ func (g graph) BetterCands(cand, subm []int, orig int) ([]int, int) {
 			mini = i
 		}
 	}
-	fmt.Println("Adding:", cand[mini])
+	//fmt.Println("Adding:", cand[mini])
 	return ConfigWithout(cand, []int{cand[maxi]}), cand[mini]
 }
 
 func (g graph) CountNeigh(verts, subm []int) ([]int, int) {
+	fmt.Println(verts)
 	neigh := make([]int, len(verts))
 	for i, vert := range verts { //вершины для которых ищем соседей
 		for _, submvert := range subm { //в каком подмножестве
@@ -286,13 +287,6 @@ func (g graph) Bearing(ngroups []int) []group {
 		_, n := g.CountNeigh(verts, currconf)
 		vertc := verts[n]
 		cand := []int{vertc}
-
-		/*if len(currconf) == grps[grupi].cap {
-			grps[grupi].verts = currconf
-			if grps[grupi].CheckFilled() {
-				break
-			}
-		} else {*/
 		for len(cand) < grps[grupi].cap {
 			neigh := g.Neighbors(cand, currconf)
 			_, bet := g.BetterCands(neigh, currconf, vertc)
@@ -314,12 +308,12 @@ func (g graph) Iteartions(tgrps []group) []group {
 	v1last := 0
 	v2last := 0
 	for v1, v2 := g.VertsToSwap(tgrps); v1 >= 0 && v2 >= 0; v1, v2 = g.VertsToSwap(tgrps) {
+		if v1last == v2 && v2last == v1 {
+			break
+		}
 		Swap(v1, v2, tgrps)
 		for i := range tgrps {
 			tgrps[i].CalcDeltas(g)
-		}
-		if v1last == v2 && v2last == v1 {
-			panic("BackSwap")
 		}
 		v1last, v2last = v1, v2
 	}
@@ -335,19 +329,18 @@ func GroupPrint(bear []group) {
 }
 
 func main() {
-	//divides := [][]int{{5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6}, {7, 7, 5, 5, 6}, {4, 4}}
+	divides := [][]int{{5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6}, {7, 7, 5, 5, 6}, {4, 4}}
 
-	g := NewGraph(test)
+	g := NewGraph(quest)
 
-	bear := g.Bearing([]int{3, 2, 2})
+	bear := g.Bearing(divides[0])
 	fmt.Println("Последовательный алгоритм:")
 	GroupPrint(bear)
 
-	/*
-		iter := g.Iteartions(bear)
-		fmt.Println("Итерационный алгоритм:")
-		GroupPrint(iter)
-	*/
+	iter := g.Iteartions(bear)
+	fmt.Println("Итерационный алгоритм:")
+	GroupPrint(iter)
+
 	g.PlotSubm(GropConfig(bear))
 
 }
